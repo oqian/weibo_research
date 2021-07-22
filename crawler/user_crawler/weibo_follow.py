@@ -20,6 +20,8 @@ CrawlDepth = int
 def random_sleep():
     if random.random() < 0.4:
         sleep(random.randint(3, 5))
+    else:
+        sleep(random.randint(1, 2))
 
 
 def write_to_txt(follow_list):
@@ -87,13 +89,14 @@ class WeiboUserCrawler:
         page_count = self.crawl_page_count(user_id)
         return [page for page in range(1, page_count + 1)]
 
-    def get_expected_user_count_left(self):
+    def get_expected_user_count_left(self, max_depth):
         """Returns expected number of users left to crawl, assuming that an average user has 200 follower. """
-        return sum(map(lambda x: 200 * (1 - 200 ** (self.max_depth - x[1])) / (1 - 200), self.crawl_queue))
+        return sum(map(lambda x: round((1 - 200 ** (max_depth - x[1] + 1)) / (1 - 200)), self.crawl_queue))
 
     def start(self):
         """运行爬虫"""
-        expected_user_count_to_crawl = self.get_expected_user_count_left()
+        print(u"预计获取user_id个数: %d" % self.get_expected_user_count_left(self.max_depth + 1))
+        expected_user_count_to_crawl = self.get_expected_user_count_left(self.max_depth)
         time_bar = tqdm(total=expected_user_count_to_crawl, desc=u"（预计）用户爬取数", unit=u"人")
         while len(self.crawl_queue) > 0:
             user_id, depth = self.crawl_queue.pop()
@@ -107,7 +110,7 @@ class WeiboUserCrawler:
                             self.crawl_queue.insert(0, (follower_user_id, depth + 1))
                         user_list_to_write.append(follower_info)
                         self.visited_user_id_set.add(follower_user_id)
-            time_bar.update(expected_user_count_to_crawl - self.get_expected_user_count_left())
+            time_bar.update(expected_user_count_to_crawl - self.get_expected_user_count_left(self.max_depth))
             write_to_txt(user_list_to_write)
         print(u'信息抓取完毕')
 
