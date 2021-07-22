@@ -16,7 +16,6 @@ from typing import Dict
 class Follow(object):
     def __init__(self, config):
         """Follow类初始化"""
-        self.validate_config(config)
         self.cookie = config['cookie']
         user_id_list = config['user_id_list']
         if not isinstance(user_id_list, list):
@@ -27,19 +26,6 @@ class Follow(object):
         self.user_id_list = user_id_list  # 要爬取的微博用户的user_id列表
         self.user_id = ''
         self.follow_list = []  # 存储爬取到的所有关注微博的uri和用户昵称
-
-    def validate_config(self, config):
-        """验证配置是否正确"""
-        user_id_list = config['user_id_list']
-        if (not isinstance(user_id_list,
-                           list)) and (not user_id_list.endswith('.txt')):
-            sys.exit(u'user_id_list值应为list类型或txt文件路径')
-        if not isinstance(user_id_list, list):
-            if not os.path.isabs(user_id_list):
-                user_id_list = os.path.split(
-                    os.path.realpath(__file__))[0] + os.sep + user_id_list
-            if not os.path.isfile(user_id_list):
-                sys.exit(u'不存在%s文件' % user_id_list)
 
     def query_webpage(self, url):
         """处理html"""
@@ -150,14 +136,25 @@ class ConfigFileReader:
         if not os.path.isfile(self.config_path):
             sys.exit(u'当前路径：%s 不存在配置文件config.json' %
                      (os.path.split(os.path.realpath(__file__))[0] + os.sep))
+        """打开文件"""
         with open(self.config_path) as f:
             try:
                 config = json.loads(f.read())
             except ValueError:
                 sys.exit(u'config.json 格式不正确，请参考 '
                          u'https://github.com/dataabc/weiboSpider#3程序设置')
+        """验证配置是否正确"""
+        user_id_list = config['user_id_list']
+        if (not isinstance(user_id_list,
+                           list)) and (not user_id_list.endswith('.txt')):
+            sys.exit(u'user_id_list值应为list类型或txt文件路径')
+        if not isinstance(user_id_list, list):
+            if not os.path.isabs(user_id_list):
+                user_id_list = os.path.split(
+                    os.path.realpath(__file__))[0] + os.sep + user_id_list
+            if not os.path.isfile(user_id_list):
+                sys.exit(u'不存在%s文件' % user_id_list)
         return config
-
 
 def main():
     try:
