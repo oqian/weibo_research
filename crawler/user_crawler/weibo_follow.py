@@ -55,7 +55,7 @@ class Follow(object):
 
     def get_page_num(self):
         """获取关注列表页数"""
-        url = "https://weibo.cn/%s/follow" % self.user_id
+        url = "https://weibo.cn/%s/fans" % self.user_id
         selector = self.deal_html(url)
         if selector.xpath("//input[@name='mp']") == []:
             page_num = 1
@@ -67,7 +67,7 @@ class Follow(object):
     def get_one_page(self, page):
         """获取第page页的user_id"""
         print(u'%s第%d页%s' % ('-' * 30, page, '-' * 30))
-        url = 'https://weibo.cn/%s/follow?page=%d' % (self.user_id, page)
+        url = 'https://weibo.cn/%s/fans?page=%d' % (self.user_id, page)
         selector = self.deal_html(url)
         table_list = selector.xpath('//table')
         if (page == 1 and len(table_list) == 0):
