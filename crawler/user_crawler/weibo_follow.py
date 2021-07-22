@@ -38,8 +38,6 @@ class WeiboUserCrawler:
         self.crawl_queue = crawl_queue
         self.visited_user_id_set = visited_user_id_set if visited_user_id_set else set()
         self.max_depth = max_depth
-        self.user_id = ''
-        self.follow_list = []  # 存储爬取到的所有关注微博的uri和用户昵称
 
     @classmethod
     def init_from_config(cls, config: Dict, max_depth=0):
@@ -75,7 +73,7 @@ class WeiboUserCrawler:
         url = 'https://weibo.cn/%s/fans?page=%d' % (user_id, page)
         selector = self.query_webpage(url)
         table_list = selector.xpath('//table')
-        if (page == 1 and len(table_list) == 0):
+        if page == 1 and len(table_list) == 0:
             print(u'cookie无效或提供的user_id无效')
         else:
             for t in table_list:
