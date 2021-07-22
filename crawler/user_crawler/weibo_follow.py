@@ -17,13 +17,7 @@ class Follow(object):
     def __init__(self, config):
         """Follow类初始化"""
         self.cookie = config['cookie']
-        user_id_list = config['user_id_list']
-        if not isinstance(user_id_list, list):
-            if not os.path.isabs(user_id_list):
-                user_id_list = os.path.split(
-                    os.path.realpath(__file__))[0] + os.sep + user_id_list
-            user_id_list = self.get_user_list(user_id_list)
-        self.user_id_list = user_id_list  # 要爬取的微博用户的user_id列表
+        self.user_id_list = config['user_id_list']
         self.user_id = ''
         self.follow_list = []  # 存储爬取到的所有关注微博的uri和用户昵称
 
@@ -154,7 +148,32 @@ class ConfigFileReader:
                     os.path.realpath(__file__))[0] + os.sep + user_id_list
             if not os.path.isfile(user_id_list):
                 sys.exit(u'不存在%s文件' % user_id_list)
+        """If user_id_list is file path, read that file"""
+        if not isinstance(user_id_list, list):
+            if not os.path.isabs(user_id_list):
+                user_id_list = os.path.split(
+                    os.path.realpath(__file__))[0] + os.sep + user_id_list
+            config['user_id_list'] = self.get_user_list(user_id_list)
+
         return config
+
+    def get_user_list(self, file_name):
+        """获取文件中的微博id信息"""
+        with open(file_name, 'rb') as f:
+            try:
+                lines = f.read().splitlines()
+                lines = [line.decode('utf-8-sig') for line in lines]
+            except UnicodeDecodeError:
+                sys.exit(u'%s文件应为utf-8编码，请先将文件编码转为utf-8再运行程序' % file_name)
+            user_id_list = []
+            for line in lines:
+                info = line.split(' ')
+                if len(info) > 0 and info[0].isdigit():
+                    user_id = info[0]
+                    if user_id not in user_id_list:
+                        user_id_list.append(user_id)
+        return user_id_list
+
 
 def main():
     try:
