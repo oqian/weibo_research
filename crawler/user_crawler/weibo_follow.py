@@ -6,11 +6,11 @@ import os
 import random
 import sys
 import traceback
-from time import sleep
-
 import requests
+from time import sleep
 from lxml import etree
 from tqdm import tqdm
+from typing import Dict
 
 
 class Follow(object):
@@ -41,7 +41,7 @@ class Follow(object):
             if not os.path.isfile(user_id_list):
                 sys.exit(u'不存在%s文件' % user_id_list)
 
-    def deal_html(self, url):
+    def query_webpage(self, url):
         """处理html"""
         try:
             user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36'
@@ -56,7 +56,7 @@ class Follow(object):
     def get_page_num(self):
         """获取关注列表页数"""
         url = "https://weibo.cn/%s/fans" % self.user_id
-        selector = self.deal_html(url)
+        selector = self.query_webpage(url)
         if selector.xpath("//input[@name='mp']") == []:
             page_num = 1
         else:
@@ -68,7 +68,7 @@ class Follow(object):
         """获取第page页的user_id"""
         print(u'%s第%d页%s' % ('-' * 30, page, '-' * 30))
         url = 'https://weibo.cn/%s/fans?page=%d' % (self.user_id, page)
-        selector = self.deal_html(url)
+        selector = self.query_webpage(url)
         table_list = selector.xpath('//table')
         if (page == 1 and len(table_list) == 0):
             print(u'cookie无效或提供的user_id无效')
@@ -140,22 +140,30 @@ class Follow(object):
             traceback.print_exc()
 
 
-def main():
-    try:
-        config_path = os.path.split(
+class ConfigFileReader:
+
+    def __init__(self, config_path=None):
+        self.config_path = config_path if config_path else os.path.split(
             os.path.realpath(__file__))[0] + os.sep + 'config.json'
-        if not os.path.isfile(config_path):
+
+    def read(self) -> Dict:
+        if not os.path.isfile(self.config_path):
             sys.exit(u'当前路径：%s 不存在配置文件config.json' %
                      (os.path.split(os.path.realpath(__file__))[0] + os.sep))
-        with open(config_path) as f:
+        with open(self.config_path) as f:
             try:
                 config = json.loads(f.read())
             except ValueError:
                 sys.exit(u'config.json 格式不正确，请参考 '
                          u'https://github.com/dataabc/weiboSpider#3程序设置')
+        return config
+
+
+def main():
+    try:
+        config = ConfigFileReader().read()
         wb = Follow(config)
         wb.start()  # 爬取微博信息
-
     except Exception as e:
         print('Error: ', e)
         traceback.print_exc()
