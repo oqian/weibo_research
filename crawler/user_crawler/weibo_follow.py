@@ -89,7 +89,7 @@ class WeiboUserCrawler:
 
     def get_expected_user_count_left(self):
         """Returns expected number of users left to crawl, assuming that an average user has 200 follower. """
-        return sum(map(lambda x: 200 ** (self.max_depth - x[1]), self.crawl_queue))
+        return sum(map(lambda x: 200 * (1 - 200 ** (self.max_depth - x[1])) / (1 - 200), self.crawl_queue))
 
     def start(self):
         """运行爬虫"""
@@ -169,7 +169,7 @@ class ConfigFileReader:
 
 def main():
     config = ConfigFileReader().read()
-    wb = WeiboUserCrawler.init_from_config(config, max_depth=0)
+    wb = WeiboUserCrawler.init_from_config(config, max_depth=1)
     wb.start()  # 爬取微博信息
 
 
