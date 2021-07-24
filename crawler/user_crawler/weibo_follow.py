@@ -17,6 +17,8 @@ from breakpoint import BreakpointDatabaseOperator
 UserId = str
 CrawlDepth = int
 
+directions = ["follow", "fans", "follow", "fans"]
+
 
 def random_sleep():
     if random.random() < 0.4:
@@ -68,9 +70,9 @@ class WeiboUserCrawler:
             print('Error: ', e)
             traceback.print_exc()
 
-    def crawl_page_count(self, user_id: UserId):
+    def crawl_page_count(self, user_id: UserId, depth):
         """获取关注列表页数"""
-        url = "https://weibo.cn/%s/fans" % user_id
+        url = "https://weibo.cn/%s/%s" % (user_id, directions[depth])
         selector = self.query_webpage(url)
         if selector.xpath("//input[@name='mp']") == []:
             page_num = 1
@@ -79,9 +81,9 @@ class WeiboUserCrawler:
                 selector.xpath("//input[@name='mp']")[0].attrib['value'])
         return page_num
 
-    def crawl_users_from_follower_page(self, user_id: UserId, page: int):
+    def crawl_users_from_follower_page(self, user_id: UserId, depth: int, page: int):
         """获取第page页的user_id"""
-        url = 'https://weibo.cn/%s/fans?page=%d' % (user_id, page)
+        url = 'https://weibo.cn/%s/%s?page=%d' % (user_id, directions[depth], page)
         selector = self.query_webpage(url)
         table_list = selector.xpath('//table')
         if page == 1 and len(table_list) == 0:
@@ -93,9 +95,9 @@ class WeiboUserCrawler:
                 nickname = t.xpath('.//a/text()')[0]
                 yield {'uri': uri, 'nickname': nickname}
 
-    def get_page_list_for_user(self, user_id):
+    def get_page_list_for_user(self, user_id: UserId, depth: int):
         """获取关注用户主页地址"""
-        page_count = self.crawl_page_count(user_id)
+        page_count = self.crawl_page_count(user_id, depth)
         return [page for page in range(1, page_count + 1)]
 
     def get_expected_user_count_left(self, max_depth):
@@ -111,9 +113,9 @@ class WeiboUserCrawler:
             user_id, depth = self.crawl_queue.pop()
             self.breakpoint_operator.remove_user_id_to_crawl(user_id)
             user_list_to_write = []
-            for page in tqdm(self.get_page_list_for_user(user_id), desc="页数"):
+            for page in tqdm(self.get_page_list_for_user(user_id, depth), desc="页数"):
                 random_sleep()
-                for follower_info in self.crawl_users_from_follower_page(user_id, page):
+                for follower_info in self.crawl_users_from_follower_page(user_id, depth, page):
                     follower_user_id = follower_info["uri"]
                     if follower_user_id not in self.visited_user_id_set:
                         if depth < self.max_depth:
