@@ -40,12 +40,12 @@ class BreakpointDatabaseOperator:
             return
         con.commit()
 
-    def remove_user_id_to_crawl(self, user_id):
+    def remove_user_id_to_crawl(self, user_id:str):
         con = self.__get_connection()
         con.execute('''
             DELETE FROM crawl_list
             WHERE user_id=?
-        ''', user_id)
+        ''', (user_id,))
         con.commit()
         pass
 

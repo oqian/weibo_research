@@ -11,6 +11,7 @@ from time import sleep
 from lxml import etree
 from tqdm import tqdm
 from typing import Dict, Set, Tuple, List
+from breakpoint import BreakpointDatabaseOperator
 
 # Type alias for readability
 UserId = str
@@ -33,17 +34,27 @@ def write_to_txt(follow_list):
 
 class WeiboUserCrawler:
     def __init__(self, cookie: str, crawl_queue: List[Tuple[UserId, CrawlDepth]], max_depth: CrawlDepth = 0,
-                 visited_user_id_set: Set[UserId] = None):
+                 visited_user_id_set: Set[UserId] = None, breakpoint_operator: BreakpointDatabaseOperator = None):
         self.cookie = cookie
         self.crawl_queue = crawl_queue
         self.visited_user_id_set = visited_user_id_set if visited_user_id_set else set()
         self.max_depth = max_depth
+        self.breakpoint_operator = breakpoint_operator if breakpoint_operator else BreakpointDatabaseOperator()
 
     @classmethod
-    def init_from_config(cls, config: Dict, max_depth=0):
+    def init_from_config(cls, config: Dict, max_depth=0, breakpoint_operator: BreakpointDatabaseOperator = None):
+        breakpoint_operator = breakpoint_operator if breakpoint_operator else BreakpointDatabaseOperator()
         user_id_depth_queue = [(user_id, 0) for user_id in config["user_id_list"]]
+        for user_id, depth in user_id_depth_queue:
+            breakpoint_operator.add_user_id_to_crawl(user_id, depth)
         return WeiboUserCrawler(cookie=config["cookie"], crawl_queue=user_id_depth_queue,
-                                max_depth=max_depth)
+                                max_depth=max_depth, breakpoint_operator=breakpoint_operator)
+
+    @classmethod
+    def init_from_breakpoint(cls, cookie: str, max_depth: CrawlDepth, breakpoint_operator: BreakpointDatabaseOperator):
+        visited_user_id_set = breakpoint_operator.get_visited_list()
+        crawl_queue = breakpoint_operator.get_crawl_list()
+        return WeiboUserCrawler(cookie, crawl_queue, max_depth, visited_user_id_set, breakpoint_operator)
 
     def query_webpage(self, url):
         """处理html"""
@@ -98,6 +109,7 @@ class WeiboUserCrawler:
         time_bar = tqdm(total=expected_user_count_to_crawl, desc=u"（预计）用户爬取数", unit=u"人")
         while len(self.crawl_queue) > 0:
             user_id, depth = self.crawl_queue.pop()
+            self.breakpoint_operator.remove_user_id_to_crawl(user_id)
             user_list_to_write = []
             for page in tqdm(self.get_page_list_for_user(user_id), desc="页数"):
                 random_sleep()
@@ -106,8 +118,10 @@ class WeiboUserCrawler:
                     if follower_user_id not in self.visited_user_id_set:
                         if depth < self.max_depth:
                             self.crawl_queue.insert(0, (follower_user_id, depth + 1))
+                            self.breakpoint_operator.add_user_id_to_crawl(follower_user_id, depth + 1)
                         user_list_to_write.append(follower_info)
                         self.visited_user_id_set.add(follower_user_id)
+                        self.breakpoint_operator.add_visited_user_id(follower_user_id)
             time_bar.update(expected_user_count_to_crawl - self.get_expected_user_count_left(self.max_depth))
             write_to_txt(user_list_to_write)
         print(u'信息抓取完毕')
