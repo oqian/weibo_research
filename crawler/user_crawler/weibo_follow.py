@@ -9,8 +9,9 @@ import traceback
 import requests
 from time import sleep
 from lxml import etree
+from lxml.etree import Element
 from tqdm import tqdm
-from typing import Dict, Set, Tuple, List
+from typing import Dict, Set, Tuple, List, Optional
 from breakpoint import BreakpointDatabaseOperator
 
 # Type alias for readability
@@ -58,22 +59,29 @@ class WeiboUserCrawler:
         crawl_queue = breakpoint_operator.get_crawl_list()
         return WeiboUserCrawler(cookie, crawl_queue, max_depth, visited_user_id_set, breakpoint_operator)
 
-    def query_webpage(self, url):
+    def query_webpage(self, url) -> Optional[Element]:
         """处理html"""
-        try:
-            user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36'
-            headers = {'User_Agent': user_agent, 'Cookie': self.cookie}
-            html = requests.get(url, headers=headers).content
-            selector = etree.HTML(html)
-            return selector
-        except Exception as e:
-            print('Error: ', e)
-            traceback.print_exc()
+        max_retries = 3
+        retries = 0
+        while retries < max_retries:
+            try:
+                user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36'
+                headers = {'User_Agent': user_agent, 'Cookie': self.cookie}
+                html = requests.get(url, headers=headers).content
+                selector = etree.HTML(html)
+                return selector
+            except Exception as e:
+                retries += 1
+                print('Error: ', e)
+                traceback.print_exc()
+                random_sleep()
 
     def crawl_page_count(self, user_id: UserId, depth):
         """获取关注列表页数"""
         url = "https://weibo.cn/%s/%s" % (user_id, directions[depth])
         selector = self.query_webpage(url)
+        if selector is None:
+            return 0
         if selector.xpath("//input[@name='mp']") == []:
             page_num = 1
         else:
@@ -85,6 +93,8 @@ class WeiboUserCrawler:
         """获取第page页的user_id"""
         url = 'https://weibo.cn/%s/%s?page=%d' % (user_id, directions[depth], page)
         selector = self.query_webpage(url)
+        if selector is None:
+            return []
         table_list = selector.xpath('//table')
         if page == 1 and len(table_list) == 0:
             print(u'cookie无效或提供的user_id无效')
