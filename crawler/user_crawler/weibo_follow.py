@@ -77,7 +77,7 @@ class WeiboUserCrawler:
         if selector.xpath("//input[@name='mp']") == []:
             page_num = 1
         else:
-            page_num = (int)(
+            page_num = int(
                 selector.xpath("//input[@name='mp']")[0].attrib['value'])
         return page_num
 
@@ -90,6 +90,8 @@ class WeiboUserCrawler:
             print(u'cookie无效或提供的user_id无效')
         else:
             for t in table_list:
+                if len(t.xpath('.//a/@href')) == 0:
+                    continue
                 im = t.xpath('.//a/@href')[-1]
                 uri = im.split('uid=')[-1].split('&')[0].split('/')[-1]
                 nickname = t.xpath('.//a/text()')[0]
@@ -186,7 +188,7 @@ class ConfigFileReader:
 
 def main():
     config = ConfigFileReader().read()
-    wb = WeiboUserCrawler.init_from_config(config, max_depth=1)
+    wb = WeiboUserCrawler.init_from_breakpoint(config["cookie"], 3, BreakpointDatabaseOperator())
     wb.start()  # 爬取微博信息
 
 
