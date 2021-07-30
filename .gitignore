@@ -7,3 +7,4 @@ user_id_list.txt
 crawl_todo_list.db
 config.json
 proxy.json
+*.log
