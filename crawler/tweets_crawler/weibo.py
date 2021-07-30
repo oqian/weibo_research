@@ -42,6 +42,7 @@ class UserConfig:
         elif item == 'since_date':
             return self.since_date
 
+
 class Weibo(object):
     def __init__(self, config):
         """Weibo类初始化"""
@@ -246,7 +247,7 @@ class Weibo(object):
             user_info['gender'] = info.get('gender', '')
             params = {
                 'containerid':
-                '230283' + str(self.user_config['user_id']) + '_-_INFO'
+                    '230283' + str(self.user_config['user_id']) + '_-_INFO'
             }
             zh_list = [
                 u'生日', u'所在地', u'小学', u'初中', u'高中', u'大学', u'公司', u'注册时间',
@@ -267,7 +268,7 @@ class Weibo(object):
                         if card.get('item_name') in zh_list:
                             user_info[en_list[zh_list.index(
                                 card.get('item_name'))]] = card.get(
-                                    'item_content', '')
+                                'item_content', '')
             user_info['statuses_count'] = info.get('statuses_count', 0)
             user_info['followers_count'] = info.get('followers_count', 0)
             user_info['follow_count'] = info.get('follow_count', 0)
@@ -329,7 +330,7 @@ class Weibo(object):
         video_url_list = []
         if weibo_info.get('page_info'):
             if weibo_info['page_info'].get('media_info') and weibo_info[
-                    'page_info'].get('type') == 'video':
+                'page_info'].get('type') == 'video':
                 media_info = weibo_info['page_info']['media_info']
                 video_url = media_info.get('mp4_720p_mp4')
                 if not video_url:
@@ -523,7 +524,7 @@ class Weibo(object):
         for k, v in weibo.items():
             if 'bool' not in str(type(v)) and 'int' not in str(
                     type(v)) and 'list' not in str(
-                        type(v)) and 'long' not in str(type(v)):
+                type(v)) and 'long' not in str(type(v)):
                 weibo[k] = v.replace(u'\u200b', '').encode(
                     sys.stdout.encoding, 'ignore').decode(sys.stdout.encoding)
         return weibo
@@ -1058,7 +1059,7 @@ class Weibo(object):
                 page1 = 0
                 random_pages = random.randint(1, 5)
                 self.start_date = datetime.now().strftime('%Y-%m-%d')
-                for page in tqdm(range(1, min(40,page_count + 1)), desc='Progress'):
+                for page in tqdm(range(1, min(40, page_count + 1)), desc='Progress'):
                     if self.got_count <= 50:
                         is_end = self.get_one_page(page)
                         if is_end:
@@ -1072,7 +1073,7 @@ class Weibo(object):
                         # 制会自动解除)，加入随机等待模拟人的操作，可降低被系统限制的风险。默
                         # 认是每爬取1到5页随机等待6到10秒，如果仍然被限，可适当增加sleep时间
                         if (page -
-                                page1) % random_pages == 0 and page < page_count:
+                            page1) % random_pages == 0 and page < page_count:
                             sleep(random.randint(6, 10))
                             page1 = page
                             random_pages = random.randint(1, 5)
