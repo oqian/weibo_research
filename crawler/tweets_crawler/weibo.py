@@ -29,6 +29,19 @@ logging.config.fileConfig(logging_path)
 logger = logging.getLogger('weibo')
 
 
+class UserConfig:
+    __slots__ = ("user_id", "since_date")
+
+    def __init__(self, user_id: str, since_date: str):
+        self.user_id = user_id
+        self.since_date = since_date
+
+    def __getitem__(self, item):
+        if item == 'user_id':
+            return self.user_id
+        elif item == 'since_date':
+            return self.since_date
+
 class Weibo(object):
     def __init__(self, config):
         """Weibo类初始化"""
@@ -1080,18 +1093,14 @@ class Weibo(object):
             except UnicodeDecodeError:
                 logger.error(u'%s文件应为utf-8编码，请先将文件编码转为utf-8再运行程序', file_path)
                 sys.exit()
-            user_config_list = []
+            user_config_list = set()
             for line in lines:
                 info = line.split(' ')
                 if len(info) > 0 and info[0].isdigit():
-                    user_config = {}
-                    user_config['user_id'] = info[0]
-                    if len(info) > 2 and self.is_date(info[2]):
-                        user_config['since_date'] = info[2]
-                    else:
-                        user_config['since_date'] = self.since_date
-                    if user_config not in user_config_list:
-                        user_config_list.append(user_config)
+                    user_config_list.add(UserConfig(
+                        user_id=info[0],
+                        since_date=info[2] if len(info) > 2 and self.is_date(info[2]) else self.since_date
+                    ))
         return user_config_list
 
     def initialize_info(self, user_config):
