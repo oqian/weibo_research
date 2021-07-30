@@ -16,6 +16,7 @@ from collections import OrderedDict
 from datetime import date, datetime, timedelta
 from time import sleep
 
+import pytz
 import requests
 from lxml import etree
 from requests.adapters import HTTPAdapter
@@ -669,11 +670,14 @@ class Weibo(object):
                         if wb:
                             if wb['id'] in self.weibo_id_list:
                                 continue
-                            created_at = datetime.strptime(
-                                wb['created_at'], '%Y-%m-%d')
+                            try:
+                                created_at = datetime.strptime(
+                                    wb['created_at'], '%Y-%m-%d')
+                            except ValueError:
+                                created_at = datetime.strptime(wb['created_at'], '%a %b %d %X %z %Y')
                             since_date = datetime.strptime(
                                 self.user_config['since_date'], '%Y-%m-%d')
-                            if created_at < since_date:
+                            if created_at < since_date.replace(tzinfo=pytz.UTC):
                                 if self.is_pinned_weibo(w):
                                     continue
                                 else:
