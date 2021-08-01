@@ -3,7 +3,8 @@
 *.tmp
 *.pyc
 .cache/
-user_id_list.txt
+user_id_list*.txt
+*.csv
 crawl_todo_list.db
 config.json
 proxy.json
