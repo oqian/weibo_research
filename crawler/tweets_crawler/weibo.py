@@ -5,7 +5,6 @@ import codecs
 import copy
 import csv
 import json
-import logging
 import logging.config
 import math
 import os
@@ -21,6 +20,7 @@ import requests
 from lxml import etree
 from requests.adapters import HTTPAdapter
 from tqdm import tqdm
+from logging import WARNING
 
 warnings.filterwarnings("ignore")
 
@@ -29,6 +29,7 @@ logging_path = os.path.split(
 logging.config.fileConfig(logging_path)
 logger = logging.getLogger('weibo')
 
+logger.setLevel(WARNING)
 
 class UserConfig:
     __slots__ = ("user_id", "since_date")
@@ -1063,7 +1064,7 @@ class Weibo(object):
                 page1 = 0
                 random_pages = random.randint(1, 5)
                 self.start_date = datetime.now().strftime('%Y-%m-%d')
-                for page in tqdm(range(1, min(40, page_count + 1)), desc='Progress'):
+                for page in tqdm(range(1, min(40, page_count + 1)), desc='页数', leave=False):
                     if self.got_count <= 50:
                         is_end = self.get_one_page(page)
                         if is_end:
@@ -1119,7 +1120,7 @@ class Weibo(object):
     def start(self):
         """运行爬虫"""
         try:
-            for user_config in self.user_config_list:
+            for user_config in tqdm(self.user_config_list, desc="用户数", unit="人"):
                 self.initialize_info(user_config)
                 self.get_pages()
                 logger.info(u'信息抓取完毕')
