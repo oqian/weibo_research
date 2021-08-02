@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-import asyncio
 import codecs
 import copy
 import csv
@@ -53,7 +52,7 @@ class UserConfig:
 
 
 class Weibo(object):
-    def __init__(self, config):
+    def __init__(self, config, user_config_list=None):
         """Weibo类初始化"""
         self.validate_config(config)
         self.filter = config[
@@ -78,25 +77,30 @@ class Weibo(object):
         self.headers = {'User_Agent': user_agent, 'Cookie': cookie}
         self.mysql_config = config.get('mysql_config')  # MySQL数据库连接配置，可以不填
         user_id_list = config['user_id_list']
-        if not isinstance(user_id_list, list):
+        if user_config_list:
+            self.user_config_list = user_config_list
+        elif not isinstance(user_id_list, list):
             if not os.path.isabs(user_id_list):
                 user_id_list = os.path.split(
                     os.path.realpath(__file__))[0] + os.sep + user_id_list
             self.user_config_file_path = user_id_list  # 用户配置文件路径
-            user_config_list = self.get_user_config_list(user_id_list)
+            self.user_config_list = self.get_user_config_list(user_id_list)
         else:
             self.user_config_file_path = ''
-            user_config_list = [{
+            self.user_config_list = [{
                 'user_id': user_id,
                 'since_date': self.since_date
             } for user_id in user_id_list]
-        self.user_config_list = user_config_list  # 要爬取的微博用户的user_config列表
         self.user_config = {}  # 用户配置,包含用户id和since_date
         self.start_date = ''  # 获取用户第一条微博时的日期
         self.user = {}  # 存储目标微博用户信息
         self.got_count = 0  # 存储爬取到的微博数
         self.weibo = []  # 存储爬取到的所有微博信息
         self.weibo_id_list = []  # 存储爬取到的所有微博id
+
+    @classmethod
+    def init_with_user_config_list(cls, config, user_config_list):
+        return Weibo(config, user_config_list)
 
     def validate_config(self, config):
         """验证配置是否正确"""
@@ -1123,13 +1127,7 @@ class Weibo(object):
 
     def start(self):
         """运行爬虫"""
-        user_config_list = ConcurrentUserConfigList(self.user_config_list)
-        with ThreadPoolExecutor(max_workers=thread_count) as executor:
-            for _ in range(thread_count):
-                executor.submit(Weibo.crawl_all_user_config, self, user_config_list)
-
-    def crawl_all_user_config(self, user_tweets_manager):
-        for user_config in user_tweets_manager:
+        for user_config in self.user_config_list:
             self.initialize_info(user_config)
             self.get_pages()
             logger.info(u'信息抓取完毕')
@@ -1156,11 +1154,18 @@ def get_config():
         sys.exit()
 
 
+def start_new_crawler(config, concurrent_user_config_list):
+    crawler = Weibo.init_with_user_config_list(config, concurrent_user_config_list)
+    crawler.start()
+
+
 def main():
     try:
         config = get_config()
-        wb = Weibo(config)
-        wb.start()  # 爬取微博信息
+        user_configs = ConcurrentUserConfigList(Weibo(config).user_config_list)  # Not an elegant wat to get config...
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+            for _ in range(thread_count):
+                executor.submit(start_new_crawler, config, user_configs)
     except Exception as e:
         logger.exception(e)
 
