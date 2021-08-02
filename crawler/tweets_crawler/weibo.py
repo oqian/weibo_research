@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
-
+import asyncio
 import codecs
 import copy
 import csv
@@ -12,6 +12,7 @@ import random
 import sys
 import warnings
 from collections import OrderedDict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from time import sleep
 
@@ -21,6 +22,11 @@ from lxml import etree
 from requests.adapters import HTTPAdapter
 from tqdm import tqdm
 from logging import WARNING
+from concurrent_user_config_list import ConcurrentUserConfigList
+from proxy_manager import ProxyConfigReader
+
+proxies = ProxyConfigReader().get_proxies()
+thread_count = 10
 
 warnings.filterwarnings("ignore")
 
@@ -30,6 +36,7 @@ logging.config.fileConfig(logging_path)
 logger = logging.getLogger('weibo')
 
 logger.setLevel(WARNING)
+
 
 class UserConfig:
     __slots__ = ("user_id", "since_date")
@@ -150,7 +157,7 @@ class Weibo(object):
         r = requests.get(url,
                          params=params,
                          headers=self.headers,
-                         verify=False)
+                         verify=False, proxies=proxies)
         return r.json()
 
     def get_weibo_json(self, page):
@@ -292,7 +299,7 @@ class Weibo(object):
         """获取长微博"""
         for i in range(5):
             url = 'https://m.weibo.cn/detail/%s' % id
-            html = requests.get(url, headers=self.headers, verify=False).text
+            html = requests.get(url, headers=self.headers, verify=False, proxies=proxies).text
             html = html[html.find('"status":'):]
             html = html[:html.rfind('"hotScheme"')]
             html = html[:html.rfind(',')]
@@ -1052,43 +1059,40 @@ class Weibo(object):
 
     def get_pages(self):
         """获取全部微博"""
-        try:
-            self.get_user_info()
-            self.print_user_info()
-            since_date = datetime.strptime(self.user_config['since_date'],
-                                           '%Y-%m-%d')
-            today = datetime.strptime(str(date.today()), '%Y-%m-%d')
-            if since_date <= today:
-                page_count = self.get_page_count()
-                wrote_count = 0
-                page1 = 0
-                random_pages = random.randint(1, 5)
-                self.start_date = datetime.now().strftime('%Y-%m-%d')
-                for page in tqdm(range(1, min(40, page_count + 1)), desc='页数', leave=False):
-                    if self.got_count <= 50:
-                        is_end = self.get_one_page(page)
-                        if is_end:
-                            break
-
-                        if page % 2 == 0:  # 每爬20页写入一次文件
-                            self.write_data(wrote_count)
-                            wrote_count = self.got_count
-
-                        # 通过加入随机等待避免被限制。爬虫速度过快容易被系统限制(一段时间后限
-                        # 制会自动解除)，加入随机等待模拟人的操作，可降低被系统限制的风险。默
-                        # 认是每爬取1到5页随机等待6到10秒，如果仍然被限，可适当增加sleep时间
-                        if (page -
-                            page1) % random_pages == 0 and page < page_count:
-                            sleep(random.randint(6, 10))
-                            page1 = page
-                            random_pages = random.randint(1, 5)
-                    else:
+        self.get_user_info()
+        self.print_user_info()
+        since_date = datetime.strptime(self.user_config['since_date'],
+                                       '%Y-%m-%d')
+        today = datetime.strptime(str(date.today()), '%Y-%m-%d')
+        if since_date <= today:
+            page_count = self.get_page_count()
+            wrote_count = 0
+            page1 = 0
+            random_pages = random.randint(1, 5)
+            self.start_date = datetime.now().strftime('%Y-%m-%d')
+            for page in tqdm(range(1, min(40, page_count + 1)), desc='页数', leave=False):
+                if self.got_count <= 50:
+                    is_end = self.get_one_page(page)
+                    if is_end:
                         break
 
-                self.write_data(wrote_count)  # 将剩余不足20页的微博写入文件
-            logger.info(u'微博爬取完成，共爬取%d条微博', self.got_count)
-        except Exception as e:
-            logger.exception(e)
+                    if page % 2 == 0:  # 每爬20页写入一次文件
+                        self.write_data(wrote_count)
+                        wrote_count = self.got_count
+
+                    # 通过加入随机等待避免被限制。爬虫速度过快容易被系统限制(一段时间后限
+                    # 制会自动解除)，加入随机等待模拟人的操作，可降低被系统限制的风险。默
+                    # 认是每爬取1到5页随机等待6到10秒，如果仍然被限，可适当增加sleep时间
+                    if (page -
+                        page1) % random_pages == 0 and page < page_count:
+                        sleep(random.randint(6, 10))
+                        page1 = page
+                        random_pages = random.randint(1, 5)
+                else:
+                    break
+
+            self.write_data(wrote_count)  # 将剩余不足20页的微博写入文件
+        logger.info(u'微博爬取完成，共爬取%d条微博', self.got_count)
 
     def get_user_config_list(self, file_path):
         """获取文件中的微博id信息"""
@@ -1119,16 +1123,19 @@ class Weibo(object):
 
     def start(self):
         """运行爬虫"""
-        try:
-            for user_config in tqdm(self.user_config_list, desc="用户数", unit="人"):
-                self.initialize_info(user_config)
-                self.get_pages()
-                logger.info(u'信息抓取完毕')
-                logger.info('*' * 100)
-                if self.user_config_file_path and self.user:
-                    self.update_user_config_file(self.user_config_file_path)
-        except Exception as e:
-            logger.exception(e)
+        user_config_list = ConcurrentUserConfigList(self.user_config_list)
+        with ThreadPoolExecutor(max_workers=thread_count) as executor:
+            for _ in range(thread_count):
+                executor.submit(Weibo.crawl_all_user_config, self, user_config_list)
+
+    def crawl_all_user_config(self, user_tweets_manager):
+        for user_config in user_tweets_manager:
+            self.initialize_info(user_config)
+            self.get_pages()
+            logger.info(u'信息抓取完毕')
+            logger.info('*' * 100)
+            if self.user_config_file_path and self.user:
+                self.update_user_config_file(self.user_config_file_path)
 
 
 def get_config():
