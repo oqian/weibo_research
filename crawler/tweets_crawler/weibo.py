@@ -169,7 +169,7 @@ class Weibo(object):
         js = self.get_json(params)
         return js
 
-    def user_to_csv(self):
+    def user_to_csv(self, user):
         """将爬取到的用户信息写入csv文件"""
         file_dir = os.path.split(
             os.path.realpath(__file__))[0] + os.sep + 'weibo'
@@ -183,17 +183,17 @@ class Weibo(object):
         ]
         result_data = [[
             v.encode('utf-8') if 'unicode' in str(type(v)) else v
-            for v in self.user.values()
+            for v in user.values()
         ]]
         self.csv_helper(result_headers, result_data, file_path)
 
-    def user_to_mongodb(self):
+    def user_to_mongodb(self, user):
         """将爬取的用户信息写入MongoDB数据库"""
-        user_list = [self.user]
+        user_list = [user]
         self.info_to_mongodb('user', user_list)
-        logger.info(u'%s信息写入MongoDB数据库完毕', self.user['screen_name'])
+        logger.info(u'%s信息写入MongoDB数据库完毕', user['screen_name'])
 
-    def user_to_mysql(self):
+    def user_to_mysql(self, user):
         """将爬取的用户信息写入MySQL数据库"""
         mysql_config = {
             'host': 'localhost',
@@ -233,16 +233,16 @@ class Weibo(object):
                 PRIMARY KEY (id)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"""
         self.mysql_create_table(mysql_config, create_table)
-        self.mysql_insert(mysql_config, 'user', [self.user])
-        logger.info(u'%s信息写入MySQL数据库完毕', self.user['screen_name'])
+        self.mysql_insert(mysql_config, 'user', [user])
+        logger.info(u'%s信息写入MySQL数据库完毕', user['screen_name'])
 
-    def user_to_database(self):
+    def user_to_database(self, user):
         """将用户信息写入文件/数据库"""
-        self.user_to_csv()
+        self.user_to_csv(user)
         if 'mysql' in self.write_mode:
-            self.user_to_mysql()
+            self.user_to_mysql(user)
         if 'mongo' in self.write_mode:
-            self.user_to_mongodb()
+            self.user_to_mongodb(user)
 
     def get_user_info(self):
         """获取用户信息"""
@@ -292,7 +292,7 @@ class Weibo(object):
             user_info['verified_reason'] = info.get('verified_reason', '')
             user = self.standardize_info(user_info)
             self.user = user
-            self.user_to_database()
+            self.user_to_database(user)
             return user
 
     def get_long_weibo(self, id):
@@ -567,27 +567,27 @@ class Weibo(object):
         weibo['at_users'] = self.get_at_users(selector)
         return self.standardize_info(weibo)
 
-    def print_user_info(self):
+    def print_user_info(self, user):
         """打印用户信息"""
         logger.info('+' * 100)
         logger.info(u'用户信息')
-        logger.info(u'用户id：%s', self.user['id'])
-        logger.info(u'用户昵称：%s', self.user['screen_name'])
-        gender = u'女' if self.user['gender'] == 'f' else u'男'
+        logger.info(u'用户id：%s', user['id'])
+        logger.info(u'用户昵称：%s', user['screen_name'])
+        gender = u'女' if user['gender'] == 'f' else u'男'
         logger.info(u'性别：%s', gender)
-        logger.info(u'生日：%s', self.user['birthday'])
-        logger.info(u'所在地：%s', self.user['location'])
-        logger.info(u'教育经历：%s', self.user['education'])
-        logger.info(u'公司：%s', self.user['company'])
-        logger.info(u'阳光信用：%s', self.user['sunshine'])
-        logger.info(u'注册时间：%s', self.user['registration_time'])
-        logger.info(u'微博数：%d', self.user['statuses_count'])
-        logger.info(u'粉丝数：%d', self.user['followers_count'])
-        logger.info(u'关注数：%d', self.user['follow_count'])
-        logger.info(u'url：https://m.weibo.cn/profile/%s', self.user['id'])
-        if self.user.get('verified_reason'):
-            logger.info(self.user['verified_reason'])
-        logger.info(self.user['description'])
+        logger.info(u'生日：%s', user['birthday'])
+        logger.info(u'所在地：%s', user['location'])
+        logger.info(u'教育经历：%s', user['education'])
+        logger.info(u'公司：%s', user['company'])
+        logger.info(u'阳光信用：%s', user['sunshine'])
+        logger.info(u'注册时间：%s', user['registration_time'])
+        logger.info(u'微博数：%d', user['statuses_count'])
+        logger.info(u'粉丝数：%d', user['followers_count'])
+        logger.info(u'关注数：%d', user['follow_count'])
+        logger.info(u'url：https://m.weibo.cn/profile/%s', user['id'])
+        if user.get('verified_reason'):
+            logger.info(user['verified_reason'])
+        logger.info(user['description'])
         logger.info('+' * 100)
 
     def print_one_weibo(self, weibo):
@@ -666,7 +666,7 @@ class Weibo(object):
         else:
             return False
 
-    def get_one_page(self, page):
+    def get_one_page(self, page: int, user):
         """获取一页的全部微博"""
         try:
             js = self.get_weibo_json(page)
@@ -690,8 +690,8 @@ class Weibo(object):
                                     continue
                                 else:
                                     logger.info(u'{}已获取{}({})的第{}页微博{}'.format(
-                                        '-' * 30, self.user['screen_name'],
-                                        self.user['id'], page, '-' * 30))
+                                        '-' * 30, user['screen_name'],
+                                        user['id'], page, '-' * 30))
                                     return True
                             if (not self.filter) and ('retweet' in wb.keys()):
                                 self.weibo.append(wb)
@@ -711,15 +711,15 @@ class Weibo(object):
                                 logger.info(u'正在过滤转发微博')
                             '''
             logger.info(u'{}已获取{}({})的第{}页微博{}'.format(
-                '-' * 30, self.user['screen_name'], self.user['id'], page,
+                '-' * 30, user['screen_name'], user['id'], page,
                 '-' * 30))
         except Exception as e:
             logger.exception(e)
 
-    def get_page_count(self):
+    def get_page_count(self, user):
         """获取微博页数"""
         try:
-            weibo_count = self.user['statuses_count']
+            weibo_count = user['statuses_count']
             page_count = int(math.ceil(weibo_count / 10.0))
             return page_count
         except KeyError:
@@ -1059,20 +1059,20 @@ class Weibo(object):
 
     def get_pages(self):
         """获取全部微博"""
-        self.get_user_info()
-        self.print_user_info()
+        user = self.get_user_info()
+        self.print_user_info(user)
         since_date = datetime.strptime(self.user_config['since_date'],
                                        '%Y-%m-%d')
         today = datetime.strptime(str(date.today()), '%Y-%m-%d')
         if since_date <= today:
-            page_count = self.get_page_count()
+            page_count = self.get_page_count(user)
             wrote_count = 0
             page1 = 0
             random_pages = random.randint(1, 5)
             self.start_date = datetime.now().strftime('%Y-%m-%d')
             for page in tqdm(range(1, min(40, page_count + 1)), desc='页数', leave=False):
                 if self.got_count <= 50:
-                    is_end = self.get_one_page(page)
+                    is_end = self.get_one_page(page, user)
                     if is_end:
                         break
 
