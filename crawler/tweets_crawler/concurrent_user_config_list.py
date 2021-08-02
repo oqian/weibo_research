@@ -13,11 +13,13 @@ class ConcurrentUserConfigList:
         self.__lock = threading.Lock()
         self.__iterator = iter(user_id_list)
         self.__progress_bar = tqdm(desc="用户数", unit="人", total=len(self))
+        self.__progress_bar.display()
 
     def __next__(self):
         with self.__lock:
+            out = next(self.__iterator)
             self.__progress_bar.update()
-            return next(self.__iterator)
+            return out
 
     def __iter__(self):
         """Each iterator will only point to self. This ensures each thread is iterating on the same iterator. """

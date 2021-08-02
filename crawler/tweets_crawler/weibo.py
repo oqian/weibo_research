@@ -1064,6 +1064,14 @@ class Weibo(object):
     def get_pages(self):
         """获取全部微博"""
         user = self.get_user_info()
+        for retry in range(3):
+            if user is None:
+                user = self.get_user_info()
+            else:
+                break
+        if user is None:
+            logging.error("Cannot get user information")
+            return
         self.print_user_info(user)
         since_date = datetime.strptime(self.user_config['since_date'],
                                        '%Y-%m-%d')
@@ -1074,7 +1082,7 @@ class Weibo(object):
             page1 = 0
             random_pages = random.randint(1, 5)
             self.start_date = datetime.now().strftime('%Y-%m-%d')
-            for page in tqdm(range(1, min(40, page_count + 1)), desc='页数', leave=False):
+            for page in range(1, min(40, page_count + 1)):
                 if self.got_count <= 50:
                     is_end = self.get_one_page(page, user)
                     if is_end:
@@ -1128,12 +1136,16 @@ class Weibo(object):
     def start(self):
         """运行爬虫"""
         for user_config in self.user_config_list:
-            self.initialize_info(user_config)
-            self.get_pages()
-            logger.info(u'信息抓取完毕')
-            logger.info('*' * 100)
-            if self.user_config_file_path and self.user:
-                self.update_user_config_file(self.user_config_file_path)
+            try:
+                self.initialize_info(user_config)
+                self.get_pages()
+                logger.info(u'信息抓取完毕')
+                logger.info('*' * 100)
+                if hasattr(self, 'user_config_file_path') and self.user:
+                    self.update_user_config_file(self.user_config_file_path)
+            except Exception as e:
+                logger.exception("Unrecoverable exception: " + str(e))
+                raise e
 
 
 def get_config():
