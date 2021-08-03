@@ -28,10 +28,9 @@ proxies = ProxyConfigReader().get_proxies()
 thread_count = 10
 
 warnings.filterwarnings("ignore")
+BASE_PATH = os.path.split(os.path.realpath(__file__))[0]
 
-logging_path = os.path.split(
-    os.path.realpath(__file__))[0] + os.sep + 'logging.conf'
-logging.config.fileConfig(logging_path)
+logging.config.fileConfig(os.path.join(BASE_PATH, 'logging.conf'))
 logger = logging.getLogger('weibo')
 
 logger.setLevel(WARNING)
@@ -81,8 +80,7 @@ class Weibo(object):
             self.user_config_list = user_config_list
         elif not isinstance(user_id_list, list):
             if not os.path.isabs(user_id_list):
-                user_id_list = os.path.split(
-                    os.path.realpath(__file__))[0] + os.sep + user_id_list
+                user_id_list = BASE_PATH + os.sep + user_id_list
             self.user_config_file_path = user_id_list  # 用户配置文件路径
             self.user_config_list = self.get_user_config_list(user_id_list)
         else:
@@ -141,8 +139,7 @@ class Weibo(object):
             sys.exit()
         if not isinstance(user_id_list, list):
             if not os.path.isabs(user_id_list):
-                user_id_list = os.path.split(
-                    os.path.realpath(__file__))[0] + os.sep + user_id_list
+                user_id_list = BASE_PATH + os.sep + user_id_list
             if not os.path.isfile(user_id_list):
                 logger.warning(u'不存在%s文件', user_id_list)
                 sys.exit()
@@ -175,8 +172,7 @@ class Weibo(object):
 
     def user_to_csv(self, user):
         """将爬取到的用户信息写入csv文件"""
-        file_dir = os.path.split(
-            os.path.realpath(__file__))[0] + os.sep + 'weibo'
+        file_dir = BASE_PATH + os.sep + 'weibo'
         if not os.path.isdir(file_dir):
             os.makedirs(file_dir)
         file_path = file_dir + os.sep + 'users.csv'
@@ -764,9 +760,7 @@ class Weibo(object):
     def get_filepath(self, type):
         """获取结果文件路径"""
         try:
-            file_dir = os.path.split(
-                os.path.realpath(__file__)
-            )[0] + os.sep + 'weibo' + os.sep + self.user['screen_name']
+            file_dir = os.sep.join([BASE_PATH, 'weibo', self.user['screen_name']])
             if type == 'img' or type == 'video':
                 file_dir = file_dir + os.sep + type
             if not os.path.isdir(file_dir):
@@ -1150,11 +1144,9 @@ class Weibo(object):
 
 def get_config():
     """获取config.json文件信息"""
-    config_path = os.path.split(
-        os.path.realpath(__file__))[0] + os.sep + 'config.json'
+    config_path = BASE_PATH + os.sep + 'config.json'
     if not os.path.isfile(config_path):
-        logger.warning(u'当前路径：%s 不存在配置文件config.json',
-                       (os.path.split(os.path.realpath(__file__))[0] + os.sep))
+        logger.warning(u'当前路径：%s 不存在配置文件config.json', (BASE_PATH + os.sep))
         sys.exit()
     try:
         with open(config_path) as f:
