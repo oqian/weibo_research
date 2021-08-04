@@ -13,7 +13,6 @@ import warnings
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
-from time import sleep
 
 import pytz
 from lxml import etree
@@ -310,7 +309,6 @@ class Weibo(object):
             if weibo_info:
                 weibo = self.parse_weibo(weibo_info)
                 return weibo
-            sleep(random.randint(6, 10))
 
     def get_pics(self, weibo_info):
         """获取微博原始图片url"""
@@ -434,7 +432,7 @@ class Weibo(object):
             file_dir = file_dir + os.sep + describe
             if not os.path.isdir(file_dir):
                 os.makedirs(file_dir)
-            for w in tqdm(self.weibo[wrote_count:], desc='Download progress'):
+            for w in tqdm(self.weibo[wrote_count:], desc='Download progress', smoothing=0.05):
                 if weibo_type == 'retweet':
                     if w.get('retweet'):
                         w = w['retweet']
@@ -1057,7 +1055,7 @@ class Weibo(object):
         """获取全部微博"""
         user = self.get_user_info()
         if user is None:
-            logging.warning("Cannot get user information")
+            logging.info("Cannot get user information")
             return
         self.print_user_info(user)
         since_date = datetime.strptime(self.user_config['since_date'],
@@ -1078,15 +1076,6 @@ class Weibo(object):
                     if page % 2 == 0:  # 每爬20页写入一次文件
                         self.write_data(wrote_count)
                         wrote_count = self.got_count
-
-                    # 通过加入随机等待避免被限制。爬虫速度过快容易被系统限制(一段时间后限
-                    # 制会自动解除)，加入随机等待模拟人的操作，可降低被系统限制的风险。默
-                    # 认是每爬取1到5页随机等待6到10秒，如果仍然被限，可适当增加sleep时间
-                    if (page -
-                        page1) % random_pages == 0 and page < page_count:
-                        sleep(random.randint(6, 10))
-                        page1 = page
-                        random_pages = random.randint(1, 5)
                 else:
                     break
 

@@ -10,7 +10,7 @@ class ProxyManager:
     """Helper class for making network requests with proxies. """
     __config = None
 
-    def __init__(self, filename="proxy.json", request_max_retry=3, switch_ip_every_n_req=10):
+    def __init__(self, filename="proxy.json", request_max_retry=3, switch_ip_every_n_req=100):
         self.filename = filename
         self.request_max_retry = request_max_retry
         self.switch_ip_every_n_req = switch_ip_every_n_req
