@@ -23,7 +23,7 @@ from concurrent_user_config_list import ConcurrentUserConfigList
 from proxy_manager import ProxyManager
 
 proxy_manager = ProxyManager()
-thread_count = 10
+thread_count = 100
 
 warnings.filterwarnings("ignore")
 BASE_PATH = os.path.split(os.path.realpath(__file__))[0]
@@ -563,7 +563,7 @@ class Weibo(object):
             weibo['topics'] = self.get_topics(selector)
             weibo['at_users'] = self.get_at_users(selector)
         else:
-            logger.warning("text is not parsable to HTML: " + text_body)
+            logger.info("text is not parsable to HTML : \'%s\'" % text_body)
         return self.standardize_info(weibo)
 
     def print_user_info(self, user):
@@ -593,7 +593,7 @@ class Weibo(object):
         """打印一条微博"""
         try:
             logger.info(u'微博id：%d', weibo['id'])
-            logger.info(u'微博正文：%s', weibo['text'])
+            logger.info(u'微博正文：%s', weibo['text'] if 'text' in weibo else '')
             logger.info(u'原始图片url：%s', weibo['pics'])
             logger.info(u'微博位置：%s', weibo['location'])
             logger.info(u'发布时间：%s', weibo['created_at'])
@@ -1058,7 +1058,7 @@ class Weibo(object):
         """获取全部微博"""
         user = self.get_user_info()
         if user is None:
-            logging.error("Cannot get user information")
+            logging.warning("Cannot get user information")
             return
         self.print_user_info(user)
         since_date = datetime.strptime(self.user_config['since_date'],
