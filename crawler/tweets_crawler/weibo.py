@@ -14,18 +14,15 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from time import sleep
-from typing import Optional
 
 import pytz
-import requests
 from lxml import etree
-from requests.adapters import HTTPAdapter, Response
 from tqdm import tqdm
 from logging import WARNING
 from concurrent_user_config_list import ConcurrentUserConfigList
-from proxy_manager import ProxyConfigReader
+from proxy_manager import ProxyManager
 
-proxies = ProxyConfigReader().get_proxies()
+proxy_manager = ProxyManager()
 thread_count = 10
 
 warnings.filterwarnings("ignore")
@@ -35,12 +32,6 @@ logging.config.fileConfig(os.path.join(BASE_PATH, 'logging.conf'))
 logger = logging.getLogger('weibo')
 
 logger.setLevel(WARNING)
-
-
-def request(url, params=None, headers=None, proxy_config=None) -> Optional[Response]:
-    s = requests.Session()
-    s.mount("https://m.weibo.cn", HTTPAdapter(max_retries=5))
-    return s.get(url, params=params, headers=headers, proxies=proxy_config)
 
 
 class UserConfig:
@@ -162,7 +153,7 @@ class Weibo(object):
     def get_json(self, params):
         """获取网页中json数据"""
         url = 'https://m.weibo.cn/api/container/getIndex?'
-        response = request(url, params=params, headers=self.headers, proxy_config=proxies)
+        response = proxy_manager.request(url, params, self.headers)
         if response:
             return response.json()
         else:
@@ -309,7 +300,7 @@ class Weibo(object):
         """获取长微博"""
         for i in range(5):
             url = 'https://m.weibo.cn/detail/%s' % id
-            html = request(url, headers=self.headers, proxy_config=proxies).text
+            html = proxy_manager.request(url, None, self.headers).text
             html = html[html.find('"status":'):]
             html = html[:html.rfind('"hotScheme"')]
             html = html[:html.rfind(',')]
@@ -371,7 +362,7 @@ class Weibo(object):
         """下载单个文件(图片/视频)"""
         try:
             if not os.path.isfile(file_path):
-                downloaded = request(url, headers=self.headers)
+                downloaded = proxy_manager.request(url, None, self.headers)
                 with open(file_path, 'wb') as f:
                     f.write(downloaded.content)
         except Exception as e:
