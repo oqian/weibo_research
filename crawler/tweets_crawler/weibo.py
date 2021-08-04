@@ -696,7 +696,6 @@ class Weibo(object):
                                 self.weibo.append(wb)
                                 self.weibo_id_list.append(wb['id'])
                                 self.got_count += 1
-                                self.print_weibo(wb)
                             else:
                                 logger.info(u'正在过滤原创微博')
                             '''
@@ -1127,8 +1126,6 @@ class Weibo(object):
             try:
                 self.initialize_info(user_config)
                 self.get_pages()
-                logger.info(u'信息抓取完毕')
-                logger.info('*' * 100)
                 if hasattr(self, 'user_config_file_path') and self.user:
                     self.update_user_config_file(self.user_config_file_path)
             except Exception as e:
