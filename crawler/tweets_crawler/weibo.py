@@ -553,13 +553,8 @@ class Weibo(object):
             weibo['screen_name'] = ''
         weibo['id'] = int(weibo_info['id'])
         weibo['bid'] = weibo_info['bid']
-        text_body = weibo_info['text']
-        selector = etree.HTML(text_body)
-        weibo['text'] = etree.HTML(text_body).xpath('string(.)')
-        weibo['article_url'] = self.get_article_url(selector)
         weibo['pics'] = self.get_pics(weibo_info)
         weibo['video_url'] = self.get_video_url(weibo_info)
-        weibo['location'] = self.get_location(selector)
         weibo['created_at'] = weibo_info['created_at']
         weibo['source'] = weibo_info['source']
         weibo['attitudes_count'] = self.string_to_int(
@@ -568,8 +563,16 @@ class Weibo(object):
             weibo_info.get('comments_count', 0))
         weibo['reposts_count'] = self.string_to_int(
             weibo_info.get('reposts_count', 0))
-        weibo['topics'] = self.get_topics(selector)
-        weibo['at_users'] = self.get_at_users(selector)
+        text_body = weibo_info['text']
+        selector = etree.HTML(text_body)
+        if selector:
+            weibo['text'] = selector.xpath('string(.)')
+            weibo['article_url'] = self.get_article_url(selector)
+            weibo['location'] = self.get_location(selector)
+            weibo['topics'] = self.get_topics(selector)
+            weibo['at_users'] = self.get_at_users(selector)
+        else:
+            logger.warning("text is not parsable to HTML: " + text_body)
         return self.standardize_info(weibo)
 
     def print_user_info(self, user):
