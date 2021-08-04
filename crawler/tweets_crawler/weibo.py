@@ -14,11 +14,12 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timedelta
 from time import sleep
+from typing import Optional
 
 import pytz
 import requests
 from lxml import etree
-from requests.adapters import HTTPAdapter
+from requests.adapters import HTTPAdapter, Response
 from tqdm import tqdm
 from logging import WARNING
 from concurrent_user_config_list import ConcurrentUserConfigList
@@ -34,6 +35,12 @@ logging.config.fileConfig(os.path.join(BASE_PATH, 'logging.conf'))
 logger = logging.getLogger('weibo')
 
 logger.setLevel(WARNING)
+
+
+def request(url, params=None, headers=None, proxy_config=None) -> Optional[Response]:
+    s = requests.Session()
+    s.mount("https://m.weibo.cn", HTTPAdapter(max_retries=5))
+    return s.get(url, params=params, headers=headers, proxies=proxy_config)
 
 
 class UserConfig:
@@ -155,11 +162,11 @@ class Weibo(object):
     def get_json(self, params):
         """获取网页中json数据"""
         url = 'https://m.weibo.cn/api/container/getIndex?'
-        r = requests.get(url,
-                         params=params,
-                         headers=self.headers,
-                         verify=False, proxies=proxies)
-        return r.json()
+        response = request(url, params=params, headers=self.headers, proxy_config=proxies)
+        if response:
+            return response.json()
+        else:
+            return None
 
     def get_weibo_json(self, page):
         """获取网页中微博json数据"""
@@ -248,6 +255,9 @@ class Weibo(object):
         """获取用户信息"""
         params = {'containerid': '100505' + str(self.user_config['user_id'])}
         js = self.get_json(params)
+        if js is None:
+            logger.warning("Cannot retrieve user information")
+            return
         if js['ok']:
             info = js['data']['userInfo']
             user_info = OrderedDict()
@@ -299,7 +309,7 @@ class Weibo(object):
         """获取长微博"""
         for i in range(5):
             url = 'https://m.weibo.cn/detail/%s' % id
-            html = requests.get(url, headers=self.headers, verify=False, proxies=proxies).text
+            html = request(url, headers=self.headers, proxy_config=proxies).text
             html = html[html.find('"status":'):]
             html = html[:html.rfind('"hotScheme"')]
             html = html[:html.rfind(',')]
@@ -361,12 +371,7 @@ class Weibo(object):
         """下载单个文件(图片/视频)"""
         try:
             if not os.path.isfile(file_path):
-                s = requests.Session()
-                s.mount(url, HTTPAdapter(max_retries=5))
-                downloaded = s.get(url,
-                                   headers=self.headers,
-                                   timeout=(5, 10),
-                                   verify=False)
+                downloaded = request(url, headers=self.headers)
                 with open(file_path, 'wb') as f:
                     f.write(downloaded.content)
         except Exception as e:
@@ -1058,11 +1063,6 @@ class Weibo(object):
     def get_pages(self):
         """获取全部微博"""
         user = self.get_user_info()
-        for retry in range(3):
-            if user is None:
-                user = self.get_user_info()
-            else:
-                break
         if user is None:
             logging.error("Cannot get user information")
             return
@@ -1164,14 +1164,11 @@ def start_new_crawler(config, concurrent_user_config_list):
 
 
 def main():
-    try:
-        config = get_config()
-        user_configs = ConcurrentUserConfigList(Weibo(config).user_config_list)  # Not an elegant wat to get config...
-        with ThreadPoolExecutor(max_workers=thread_count) as executor:
-            for _ in range(thread_count):
-                executor.submit(start_new_crawler, config, user_configs)
-    except Exception as e:
-        logger.exception(e)
+    config = get_config()
+    user_configs = ConcurrentUserConfigList(Weibo(config).user_config_list)  # Not an elegant wat to get config...
+    with ThreadPoolExecutor(max_workers=thread_count) as executor:
+        for _ in range(thread_count):
+            executor.submit(start_new_crawler, config, user_configs)
 
 
 if __name__ == '__main__':
