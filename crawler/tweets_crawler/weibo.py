@@ -164,8 +164,7 @@ class Weibo(object):
             'containerid': '107603' + str(self.user_config['user_id']),
             'page': page
         }
-        js = self.get_json(params)
-        return js
+        return self.get_json(params)
 
     def user_to_csv(self, user):
         """将爬取到的用户信息写入csv文件"""
@@ -667,6 +666,9 @@ class Weibo(object):
         """获取一页的全部微博"""
         try:
             js = self.get_weibo_json(page)
+            if js is None:
+                logger.info("js is None")
+                return
             if js['ok']:
                 weibos = js['data']['cards']
                 for w in weibos:
@@ -1055,7 +1057,7 @@ class Weibo(object):
         """获取全部微博"""
         user = self.get_user_info()
         if user is None:
-            logging.info("Cannot get user information")
+            logger.info("Cannot get user information")
             return
         self.print_user_info(user)
         since_date = datetime.strptime(self.user_config['since_date'],
@@ -1118,8 +1120,7 @@ class Weibo(object):
                 if hasattr(self, 'user_config_file_path') and self.user:
                     self.update_user_config_file(self.user_config_file_path)
             except Exception as e:
-                logger.exception("Unrecoverable exception: " + str(e))
-                raise e
+                logger.exception("Found exception that should be handled: " + str(e))
 
 
 def get_config():
