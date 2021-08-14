@@ -9,3 +9,4 @@ crawl_todo_list.db
 config.json
 proxy.json
 *.log
+weibo/
