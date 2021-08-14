@@ -2,3 +2,5 @@ lxml
 requests
 tqdm
 pymysql
+bs4
+ratelimit
