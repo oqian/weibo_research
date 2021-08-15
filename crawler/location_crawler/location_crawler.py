@@ -30,14 +30,20 @@ def get_profile_response(session: requests.Session, user_id):
 
 
 def parse_location(response):
+    """
+    Parses response html into location of the user_id.
+        Raises ConnectionError if the response is considered ill-formed.
+    """
     if response is None or response.status_code != 200:
         raise ConnectionError
     soup = BeautifulSoup(response.content, 'lxml')
+    if soup is None or soup.body is None or soup.body.text is None:
+        raise ConnectionError
     if 'User does not exists!' in soup.body.text:
         return None
     try:
         contents = soup.body.find_all('div', class_='c')[3].contents
-    except IndexError:
+    except IndexError or AttributeError:
         raise ConnectionError
     for content in contents:
         if '地区' in content:
@@ -80,7 +86,6 @@ def main():
             save_remaining_ids(remaining_id_list)
         except ConnectionError:
             user_id_list_bar.set_description("Connection error!")
-            pass
 
 
 if __name__ == '__main__':
