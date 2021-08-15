@@ -14,7 +14,7 @@ def read_user_id_list(path):
 
 
 @sleep_and_retry
-@limits(calls=1, period=5)
+@limits(calls=3, period=6)
 def get_profile_response(user_id):
     return request(
         method='GET',
@@ -62,7 +62,7 @@ def main():
                 user_id_list_bar.set_description("%10s - %-10s" % (user_id, location))
                 write_location(user_id, location)
             remaining_id_list.remove(user_id)
-            save_remaining_ids(user_id_list)
+            save_remaining_ids(remaining_id_list)
         except ConnectionError:
             user_id_list_bar.set_description("Connection error!")
             pass
