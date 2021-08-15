@@ -4,7 +4,8 @@ from ratelimit import limits, sleep_and_retry
 from tqdm import tqdm
 
 cookie = ""
-user_id_list_path = ""
+# Default to use break point id list
+user_id_list_path = "remaining_user_id_list.txt"
 
 
 def read_user_id_list(path):
@@ -30,7 +31,10 @@ def parse_location(response):
     soup = BeautifulSoup(response.content, 'lxml')
     if 'User does not exists!' in soup.body.text:
         return None
-    contents = soup.body.find_all('div', class_='c')[3].contents
+    try:
+        contents = soup.body.find_all('div', class_='c')[3].contents
+    except IndexError:
+        raise ConnectionError
     for content in contents:
         if '地区' in content:
             return content.strip('地区:')
@@ -43,7 +47,7 @@ def write_location(user_id, location):
 
 def save_remaining_ids(user_id_list):
     with open('remaining_user_id_list.txt', 'w') as file:
-        file.writelines(user_id_list)
+        file.writelines([uid + '\n' for uid in user_id_list])
 
 
 def main():
