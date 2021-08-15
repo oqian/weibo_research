@@ -11,3 +11,4 @@ proxy.json
 *.log
 weibo/
 *id_list*.txt
+cookie.txt

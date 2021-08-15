@@ -1,11 +1,21 @@
+import requests
 from bs4 import BeautifulSoup
-from requests import request
 from ratelimit import limits, sleep_and_retry
 from tqdm import tqdm
+from http.cookies import SimpleCookie
+from requests.cookies import RequestsCookieJar
 
-cookie = ""
+with open("cookie.txt", "r") as f:
+    cookie_string = f.readline().strip('\n')
+
 # Default to use break point id list
 user_id_list_path = "remaining_user_id_list.txt"
+
+
+def to_cookiejar(string):
+    cookiejar = RequestsCookieJar()
+    cookiejar.update(SimpleCookie(string))
+    return cookiejar
 
 
 def read_user_id_list(path):
@@ -15,14 +25,8 @@ def read_user_id_list(path):
 
 @sleep_and_retry
 @limits(calls=3, period=6)
-def get_profile_response(user_id):
-    return request(
-        method='GET',
-        url='https://weibo.cn/{}/info'.format(user_id),
-        headers={
-            "User_Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/86.0.4240.111 Safari/537.36",
-            "Cookie": cookie,
-        })
+def get_profile_response(session: requests.Session, user_id):
+    return session.get(url='https://weibo.cn/{}/info'.format(user_id))
 
 
 def parse_location(response):
@@ -50,12 +54,23 @@ def save_remaining_ids(user_id_list):
         file.writelines([uid + '\n' for uid in user_id_list])
 
 
+def create_https_session(cookie_jar):
+    session = requests.Session()
+    session.headers = {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Safari/605.1.15",
+    }
+    session.cookies = cookie_jar
+    return session
+
+
 def main():
     user_id_list = read_user_id_list(user_id_list_path)
     remaining_id_list = set(user_id_list)
     user_id_list_bar = tqdm(user_id_list, desc='Location crawled')
+    cookie_jar = to_cookiejar(cookie_string)
+    session = create_https_session(cookie_jar)
     for user_id in user_id_list_bar:
-        response = get_profile_response(user_id)
+        response = get_profile_response(session, user_id)
         try:
             location = parse_location(response)
             if location is not None:
