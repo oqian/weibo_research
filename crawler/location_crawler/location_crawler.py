@@ -26,7 +26,10 @@ def read_user_id_list(path):
 @sleep_and_retry
 @limits(calls=3, period=6)
 def get_profile_response(session: requests.Session, user_id):
-    return session.get(url='https://weibo.cn/{}/info'.format(user_id))
+    try:
+        return session.get(url='https://weibo.cn/{}/info'.format(user_id))
+    except:
+        return None
 
 
 def parse_location(response):
