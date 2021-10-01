@@ -131,7 +131,7 @@ class WeiboUserCrawler:
                     follower_user_id = follower_info["uri"]
                     if follower_user_id not in self.visited_user_id_set:
                         if depth < self.max_depth:
-                            self.crawl_queue.insert(0, (follower_user_id, depth + 1))
+                            self.crawl_queue.append((follower_user_id, depth + 1))
                             self.breakpoint_operator.add_user_id_to_crawl(follower_user_id, depth + 1)
                         user_list_to_write.append(follower_info)
                         self.visited_user_id_set.add(follower_user_id)
@@ -198,7 +198,8 @@ class ConfigFileReader:
 
 def main():
     config = ConfigFileReader().read()
-    wb = WeiboUserCrawler.init_from_breakpoint(config["cookie"], 3, BreakpointDatabaseOperator())
+    # wb = WeiboUserCrawler.init_from_breakpoint(config["cookie"], 3, BreakpointDatabaseOperator())
+    wb = WeiboUserCrawler.init_from_config(config, 3, BreakpointDatabaseOperator())
     wb.start()  # 爬取微博信息
 
 
