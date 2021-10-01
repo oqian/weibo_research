@@ -35,11 +35,6 @@ def write_to_txt(follow_list):
                 sys.stdout.encoding))
 
 
-def get_current_num():
-    with open('user_id_list.txt', 'r+', encoding='utf-8') as f:
-        return len(list(map(lambda x: x.split(' ')[0], f.readlines())))
-
-
 class WeiboUserCrawler:
     def __init__(self, cookie: str, crawl_queue: List[Tuple[UserId, CrawlDepth]], max_depth: CrawlDepth = 0,
                  visited_user_id_set: Set[UserId] = None, breakpoint_operator: BreakpointDatabaseOperator = None):
@@ -142,7 +137,6 @@ class WeiboUserCrawler:
                         self.visited_user_id_set.add(follower_user_id)
                         self.breakpoint_operator.add_visited_user_id(follower_user_id)
             time_bar.update(expected_user_count_to_crawl - self.get_expected_user_count_left(self.max_depth))
-            print('\nWe have collected %d for now' % (get_current_num()))
             write_to_txt(user_list_to_write)
         print(u'信息抓取完毕')
 
