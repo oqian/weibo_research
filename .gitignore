@@ -13,3 +13,4 @@ weibo/
 *id_list*.txt
 cookie.txt
 data/
+*.pkl
