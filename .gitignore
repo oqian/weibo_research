@@ -5,6 +5,7 @@ weibo/
 .idea/
 processing/.ipynb_checkpoints/
 processing/figures/
+processing/df/
 
 *.tmp
 *.pyc
