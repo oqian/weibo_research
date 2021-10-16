@@ -29,7 +29,7 @@ class ProxyManager:
     def __get_new_session(self):
         s = requests.Session()
         s.mount("https://m.weibo.cn", HTTPAdapter(max_retries=self.request_max_retry))
-        # s.proxies = self.__get_new_proxies()
+        s.proxies = self.__get_new_proxies()
         return s
 
     def __get_new_proxies(self):
