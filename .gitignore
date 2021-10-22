@@ -1,6 +1,7 @@
 .cache/
 data/
 data_general/
+data_validation/
 weibo/
 .idea/
 processing/.ipynb_checkpoints/
